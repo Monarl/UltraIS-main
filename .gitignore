@@ -1,0 +1,41 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Training artifacts
+experiments/*
+tb_logger/
+results/
+
+# Model weights and checkpoints
+*.pth
+*.pt
+*.ckpt
+*.state
+*.pth.tar
+
+# Data and outputs
+datasets/
+visualization/
+
+# OS files
+.DS_Store
+Thumbs.db

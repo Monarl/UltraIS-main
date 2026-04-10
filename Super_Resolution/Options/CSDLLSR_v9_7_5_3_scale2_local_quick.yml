@@ -1,0 +1,134 @@
+# Local quick training config for generating a compatible UltraIS checkpoint (.pth)
+name: UltraIS_v9_7_5_scale2_local_quick
+model_type: CSDLLSRv4
+scale: 2
+num_gpu: 1
+manual_seed: 100
+
+datasets:
+  train:
+    name: TrainSet
+    type: Dataset_PairedImage
+    dataroot_gt: /workspace/LLLR-Image-Enhancement/datasets/RELLISUR-Dataset/Train/NLHR/X2
+    dataroot_lq: /workspace/LLLR-Image-Enhancement/datasets/RELLISUR-Dataset/Train/LLLR
+    direct_gt_match: true
+    geometric_augs: true
+    use_grayatten: false
+    use_ueatten: false
+    use_multask: false
+    use_illguidance: true
+
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+
+    use_shuffle: true
+    num_worker_per_gpu: 4
+    batch_size_per_gpu: 4
+
+    mini_batch_sizes: [4, 4, 2]
+    iters: [600, 900, 500]
+    gt_size: 192
+    gt_sizes: [128, 160, 192]
+
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+  val:
+    name: ValSet
+    type: Dataset_PairedImage
+    dataroot_gt: /workspace/LLLR-Image-Enhancement/datasets/RELLISUR-Dataset/Val/NLHR/X2
+    dataroot_lq: /workspace/LLLR-Image-Enhancement/datasets/RELLISUR-Dataset/Val/LLLR
+    direct_gt_match: true
+    io_backend:
+      type: disk
+    use_grayatten: false
+    use_illguidance: true
+
+network_g:
+  type: CSDLLSRNetv9_7_5
+  inp_channels: 3
+  out_channels: 3
+  n_feat: 64
+  scale: 2
+
+path:
+  pretrain_network_g: ~
+  strict_load_g: true
+  resume_state: ~
+
+train:
+  total_iter: 2000
+  warmup_iter: -1
+  use_grad_clip: true
+
+  scheduler:
+    type: CosineAnnealingRestartCyclicLR
+    periods: [600, 1400]
+    restart_weights: [1, 1]
+    eta_mins: [0.0002, 0.000001]
+
+  mixing_augs:
+    mixup: true
+    mixup_beta: 1.2
+    use_identity: true
+
+  optim_g:
+    type: AdamW
+    lr: !!float 2e-4
+    weight_decay: !!float 1e-4
+    betas: [0.9, 0.999]
+
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 1
+    reduction: mean
+
+  perceptual_opt:
+    type: PerceptualLoss
+    layer_weights:
+      'conv1_2': 0.1
+      'conv2_2': 0.1
+      'conv3_4': 1
+      'conv4_4': 1
+      'conv5_4': 1
+    vgg_type: vgg19
+    use_input_norm: true
+    perceptual_weight: !!float 0.01
+    style_weight: 0
+    range_norm: false
+    criterion: l1
+
+  IllSmoothL1_opt:
+    type: SmoothL1
+    loss_weight: 1
+
+  IllColor_opt:
+    type: IllColor
+    loss_weight: 1
+
+val:
+  window_size: 4
+  val_freq: 500
+  save_img: false
+  rgb2bgr: true
+  use_image: true
+  max_minibatch: 4
+
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 2
+      test_y_channel: false
+
+logger:
+  print_freq: 100
+  save_checkpoint_freq: 500
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+dist_params:
+  backend: nccl
+  port: 29500
