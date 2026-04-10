@@ -127,7 +127,7 @@ train:
 val:
   window_size: 16
   val_freq: !!float 3e3
-  save_img: true
+  save_img: false
   rgb2bgr: true
   use_image: true
   max_minibatch: 8
