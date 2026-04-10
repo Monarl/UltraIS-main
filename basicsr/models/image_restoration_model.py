@@ -233,6 +233,11 @@ class CSDLLSRv4(BaseModel):
 
     def pad_test(self, window_size):        
         scale = self.opt.get('scale', 1)
+        # UltraIS guidance branch has multiple down/up stages; padding to 4 can
+        # still produce odd intermediate shapes (e.g., 157 vs 156 at concat).
+        # Enforce a safer minimum multiple during validation.
+        if self.opt['datasets']['train'].get('use_illguidance', False):
+            window_size = max(int(window_size), 16)
         mod_pad_h, mod_pad_w = 0, 0
         _, _, h, w = self.lq.size()
         if h % window_size != 0:

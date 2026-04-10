@@ -108,7 +108,7 @@ train:
     loss_weight: 1
 
 val:
-  window_size: 4
+  window_size: 16
   val_freq: 500
   save_img: false
   rgb2bgr: true

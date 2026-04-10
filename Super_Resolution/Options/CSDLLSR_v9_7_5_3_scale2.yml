@@ -125,7 +125,7 @@ train:
 
 # validation settings
 val:
-  window_size: 4
+  window_size: 16
   val_freq: !!float 3e3
   save_img: true
   rgb2bgr: true
