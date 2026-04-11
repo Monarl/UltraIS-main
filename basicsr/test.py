@@ -44,31 +44,19 @@ def main():
     # create model
     model = create_model(opt)
 
-    # for test_loader in test_loaders:
-    #     test_set_name = test_loader.dataset.opt['name']
-    #     logger.info(f'Testing {test_set_name}...')
-    #     rgb2bgr = opt['val'].get('rgb2bgr', True)
-    #     # wheather use uint8 image to compute metrics
-    #     use_image = opt['val'].get('use_image', True)
-    #     model.validation(
-    #         test_loader,
-    #         current_iter=opt['name'],
-    #         tb_logger=None,
-    #         save_img=opt['val']['save_img'],
-    #         rgb2bgr=rgb2bgr, use_image=use_image)
-    
-    test_loader = test_loaders[1]
-    test_set_name = test_loader.dataset.opt['name']
-    logger.info(f'Testing {test_set_name}...')
-    rgb2bgr = opt['val'].get('rgb2bgr', True) # 从配置文件opt中获取是否需要将RGB图像转换为BGR格式，默认为True。
-    # wheather use uint8 image to compute metrics
-    use_image = opt['val'].get('use_image', True) 
-    model.validation(
-        test_loader,
-        current_iter=opt['name'],
-        tb_logger=None,
-        save_img=opt['val']['save_img'],
-        rgb2bgr=rgb2bgr, use_image=use_image)
+    for test_loader in test_loaders:
+        test_set_name = test_loader.dataset.opt['name']
+        logger.info(f'Testing {test_set_name}...')
+        rgb2bgr = opt['val'].get('rgb2bgr', True)
+        # whether use uint8 image to compute metrics
+        use_image = opt['val'].get('use_image', True)
+        model.validation(
+            test_loader,
+            current_iter=opt['name'],
+            tb_logger=None,
+            save_img=opt['val']['save_img'],
+            rgb2bgr=rgb2bgr,
+            use_image=use_image)
 
 
 if __name__ == '__main__':

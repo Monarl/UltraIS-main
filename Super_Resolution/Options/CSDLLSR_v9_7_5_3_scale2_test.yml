@@ -1,0 +1,62 @@
+# Test config for net_g_147000_x2 checkpoint
+name: test_v9_7_5_3_scale2_net_g_147000
+model_type: CSDLLSRv4
+scale: 2
+num_gpu: 1
+manual_seed: 100
+
+datasets:
+  test_1:
+    name: RELLISUR_Test_X2
+    type: Dataset_PairedImage
+    dataroot_gt: /workspace/datasets/RELLISUR-Dataset/Test/NLHR/X2
+    dataroot_lq: /workspace/datasets/RELLISUR-Dataset/Test/LLLR
+    direct_gt_match: true
+    io_backend:
+      type: disk
+    use_grayatten: false
+    use_illguidance: true
+
+network_g:
+  type: CSDLLSRNetv9_7_5
+  inp_channels: 3
+  out_channels: 3
+  n_feat: 64
+  scale: 2
+
+path:
+  pretrain_network_g: /workspace/UltraIS-main/experiments/pretrained_models/net_g_147000_x2.pth
+  strict_load_g: true
+  param_key: params
+
+val:
+  window_size: 16
+  save_img: true
+  rgb2bgr: true
+  use_image: true
+
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 2
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 2
+      test_y_channel: false
+
+# Keep for parser compatibility (ignored in test mode)
+train:
+  total_iter: 1
+
+logger:
+  print_freq: 100
+  save_checkpoint_freq: 100
+  use_tb_logger: false
+  wandb:
+    project: ~
+    resume_id: ~
+
+dist_params:
+  backend: nccl
+  port: 29500

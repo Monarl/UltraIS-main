@@ -60,10 +60,12 @@ class CSDLLSRv4(BaseModel):
 
         # define network
 
-        self.mixing_flag = self.opt['train']['mixing_augs'].get('mixup', False)
+        train_opt = self.opt.get('train', {})
+        mixing_opt = train_opt.get('mixing_augs', {})
+        self.mixing_flag = mixing_opt.get('mixup', False)
         if self.mixing_flag:
-            mixup_beta       = self.opt['train']['mixing_augs'].get('mixup_beta', 1.2)
-            use_identity     = self.opt['train']['mixing_augs'].get('use_identity', False)
+            mixup_beta = mixing_opt.get('mixup_beta', 1.2)
+            use_identity = mixing_opt.get('use_identity', False)
             self.mixing_augmentation = Mixing_Augment(mixup_beta, use_identity, self.device)
 
         self.net_g = define_network(deepcopy(opt['network_g']))  
@@ -176,6 +178,14 @@ class CSDLLSRv4(BaseModel):
         if 'gray' in data:
             self.atten = data['gray'].to(self.device)
 
+    def _runtime_dataset_opt(self):
+        datasets = self.opt.get('datasets', {})
+        if 'train' in datasets:
+            return datasets['train']
+        if len(datasets) > 0:
+            return next(iter(datasets.values()))
+        return {}
+
 
     def optimize_parameters(self, current_iter):
         self.optimizer_g.zero_grad()
@@ -233,10 +243,11 @@ class CSDLLSRv4(BaseModel):
 
     def pad_test(self, window_size):        
         scale = self.opt.get('scale', 1)
+        ds_opt = self._runtime_dataset_opt()
         # UltraIS guidance branch has multiple down/up stages; padding to 4 can
         # still produce odd intermediate shapes (e.g., 157 vs 156 at concat).
         # Enforce a safer minimum multiple during validation.
-        if self.opt['datasets']['train'].get('use_illguidance', False):
+        if ds_opt.get('use_illguidance', False):
             window_size = max(int(window_size), 16)
         mod_pad_h, mod_pad_w = 0, 0
         _, _, h, w = self.lq.size()
@@ -245,11 +256,11 @@ class CSDLLSRv4(BaseModel):
         if w % window_size != 0:
             mod_pad_w = window_size - w % window_size
         img = F.pad(self.lq, (0, mod_pad_w, 0, mod_pad_h), 'reflect')
-        if self.opt['datasets']['train']['use_grayatten']:
+        if ds_opt.get('use_grayatten', False):
             gray_atten = F.pad(self.atten, (0, mod_pad_w, 0, mod_pad_h), 'reflect')
         else:
             gray_atten = None
-        if self.opt['datasets']['train']['use_illguidance']:
+        if ds_opt.get('use_illguidance', False):
             atten = F.pad(self.atten, (0, mod_pad_w, 0, mod_pad_h), 'reflect')
         else:
             atten = None
@@ -259,16 +270,17 @@ class CSDLLSRv4(BaseModel):
  
     
     def nonpad_test(self, img=None, gray_atten=None, atten=None):
+        ds_opt = self._runtime_dataset_opt()
         if img is None:
             img = self.lq    
-        if gray_atten is None and self.opt['datasets']['train']['use_grayatten']:
+        if gray_atten is None and ds_opt.get('use_grayatten', False):
             gray_atten = self.atten  
-        if atten is None and self.opt['datasets']['train']['use_illguidance']:
+        if atten is None and ds_opt.get('use_illguidance', False):
             atten = self.atten
         if hasattr(self, 'net_g_ema'):
             self.net_g_ema.eval()
             with torch.no_grad():
-                if self.opt['datasets']['train']['use_grayatten']:
+                if ds_opt.get('use_grayatten', False):
                     _, _, pred = self.net_g_ema(img, gray_atten)
                 else:
                     _, _, pred = self.net_g_ema(img, atten)
@@ -278,7 +290,7 @@ class CSDLLSRv4(BaseModel):
         else:
             self.net_g.eval()
             with torch.no_grad():
-                if self.opt['datasets']['train']['use_grayatten']:
+                if ds_opt.get('use_grayatten', False):
                     _, _, pred = self.net_g(img, gray_atten)
                 else:
                     _, _, pred = self.net_g(img, atten)
@@ -326,7 +338,7 @@ class CSDLLSRv4(BaseModel):
 
             # tentative for out of GPU memory
             del self.lq
-            if self.opt['datasets']['train']['use_grayatten']:
+            if self._runtime_dataset_opt().get('use_grayatten', False):
                 del self.atten
             del self.output
             torch.cuda.empty_cache()
@@ -356,13 +368,23 @@ class CSDLLSRv4(BaseModel):
                 if use_image:
                     for name, opt_ in opt_metric.items():
                         metric_type = opt_.pop('type')
-                        self.metric_results[name] += getattr(
-                            metric_module, metric_type)(sr_img, gt_img, **opt_)
+                        metric_fn = getattr(metric_module, metric_type)
+                        if metric_type == 'calculate_niqe':
+                            self.metric_results[name] += metric_fn(sr_img, **opt_)
+                        else:
+                            self.metric_results[name] += metric_fn(sr_img, gt_img, **opt_)
                 else:
                     for name, opt_ in opt_metric.items():
                         metric_type = opt_.pop('type')
-                        self.metric_results[name] += getattr(
-                            metric_module, metric_type)(visuals['result'], visuals['gt'], **opt_)
+                        metric_fn = getattr(metric_module, metric_type)
+                        if metric_type == 'calculate_niqe':
+                            sr_img_tensor = visuals['result']
+                            if sr_img_tensor.ndim == 4:
+                                sr_img_tensor = sr_img_tensor[0]
+                            sr_img_np = tensor2img([sr_img_tensor], rgb2bgr=rgb2bgr)
+                            self.metric_results[name] += metric_fn(sr_img_np, **opt_)
+                        else:
+                            self.metric_results[name] += metric_fn(visuals['result'], visuals['gt'], **opt_)
 
             cnt += 1
 
