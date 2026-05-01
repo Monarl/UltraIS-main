@@ -9,8 +9,8 @@ datasets:
   test_1:
     name: RELLISUR_Test_X2
     type: Dataset_PairedImage
-    dataroot_gt: /workspace/datasets/RELLISUR-Dataset/Test/NLHR/X2
-    dataroot_lq: /workspace/datasets/RELLISUR-Dataset/Test/LLLR
+    dataroot_gt: /workspace/LLLR-Image-Enhancement/datasets/RELLISUR-Dataset/Test/NLHR/X2
+    dataroot_lq: /workspace/LLLR-Image-Enhancement/datasets/RELLISUR-Dataset/Test/LLLR
     direct_gt_match: true
     io_backend:
       type: disk
