@@ -25,7 +25,7 @@ network_g:
   scale: 2
 
 path:
-  pretrain_network_g: /workspace/UltraIS-main/experiments/pretrained_models/net_g_147000_x2.pth
+  pretrain_network_g: /workspace/UltraIS-main/experiments/pretrained_models/net_g_latest_x2.pth
   strict_load_g: true
   param_key: params
 
